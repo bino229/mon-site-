@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vote Bénin vs Gabon</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    .candidate { display: inline-block; margin: 20px; cursor: pointer; }
+    img { width: 150px; height: 100px; border: 2px solid transparent; border-radius: 10px; }
+    .selected img { border-color: #007bff; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    #message { margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h1>Votez pour votre pays préféré</h1>
+
+  <div id="candidates">
+    <div class="candidate" data-id="benin">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/0/0a/Flag_of_Benin.svg" alt="Bénin" />
+      <p>Bénin</p>
+    </div>
+    <div class="candidate" data-id="gabon">
+<img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Flag_of_Gabon.svg" alt="Gabon" />
+      <p>Gabon</p>
+    </div>
+  </div>
+
+  <button id="voteBtn" disabled>Voter</button>
+
+  <div id="message"></div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCSd1kU9SK19Zsj0LKV3S_ezCi8fWEwtyU",
+      authDomain: "vote-benin-gabon.firebaseapp.com",
+      projectId: "vote-benin-gabon",
+      storageBucket: "vote-benin-gabon.firebasestorage.app",
+      messagingSenderId: "698676582977",
+      appId: "1:698676582977:web:6adc3a986a06041b9a04c0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let selectedCandidate = null;
+    const voteBtn = document.getElementById("voteBtn");
+    const message = document.getElementById("message");
+    const candidatesDiv = document.getElementById("candidates");
+
+    // Gérer la sélection du candidat
+    candidatesDiv.querySelectorAll('.candidate').forEach(el => {
+      el.addEventListener('click', () => {candidatesDiv.querySelectorAll('.candidate').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedCandidate = el.getAttribute('data-id');
+        voteBtn.disabled = false;
+        message.textContent = "";
+      });
+    });
+
+    // Fonction pour vérifier si la personne a déjà voté (simple contrôle via localStorage)
+    function hasVoted() {
+      return localStorage.getItem("hasVoted") === "true";
+    }
+
+    // Enregistrer un vote
+    async function vote() {
+      if (hasVoted()) {
+        message.textContent = "Vous avez déjà voté.";
+        return;
+      }
+      if (!selectedCandidate) return;
+
+      try {
+        const voteDoc = doc(db, "votes", selectedCandidate);
+        const docSnap = await getDoc(voteDoc);
+
+        if (docSnap.exists()) {
+          await updateDoc(voteDoc, {
+            count: increment(1)
+          });
+        } else {
+          await setDoc(voteDoc, { count: 1 });
+        }
+
+        localStorage.setItem("hasVoted", "true");
+        message.textContent = "Merci pour votre vote !";
+        voteBtn.disabled = true;
+        candidatesDiv.querySelectorAll('.candidate').forEach(c => c.classList.remove('selected'));
+        selectedCandidate = null;
+
+      } catch (e) {message.textContent = "Erreur lors du vote. Veuillez réessayer.";
+        console.error(e);
+      }
+    }
+
+    voteBtn.addEventListener('click', vote);
+
+    // Si déjà voté, bloque le bouton
+    if (hasVoted()) {
+      message.textContent = "Vous avez déjà voté.";
+      voteBtn.disabled = true;
+    }
+  </script>
+</body>
+  </html>
